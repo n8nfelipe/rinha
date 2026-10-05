@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101417">
+  <title>Records / operação</title>
+  <style>
+    :root { color-scheme: dark; --ink:#e8f0ed; --muted:#93a29e; --bg:#101417; --panel:#171d20; --line:#2a3536; --teal:#77e0c0; --orange:#ffb454; --red:#ff807d; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.12; background:#17352f; clip-path:polygon(76% 0, 100% 0, 100% 24%, 92% 17%); }
+    main { position:relative; max-width:1180px; margin:0 auto; padding:42px 28px 56px; }
+    header { display:flex; justify-content:space-between; align-items:flex-end; gap:24px; padding-bottom:32px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:clamp(2rem, 5vw, 4.3rem); letter-spacing:-.055em; line-height:.95; font-weight:750; }
+    .subtitle { color:var(--muted); max-width:40ch; margin:14px 0 0; line-height:1.55; }
+    .live { display:flex; align-items:center; gap:9px; color:var(--teal); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; }
+    .dot { width:9px; height:9px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 5px #77e0c01c; }
+    .dot.error { background:var(--red); box-shadow:0 0 0 5px #ff807d1c; }
+    .summary { display:grid; grid-template-columns:1.3fr 1fr 1fr 1fr 1fr; gap:1px; margin:28px 0 36px; background:var(--line); border:1px solid var(--line); }
+    .metric { background:var(--panel); padding:22px 20px 20px; min-height:126px; }
+    .metric:first-child { background:#1b302d; }
+    .label { color:var(--muted); font-size:.73rem; letter-spacing:.08em; text-transform:uppercase; }
+    .value { margin-top:15px; font-size:clamp(1.65rem, 3vw, 2.55rem); font-weight:720; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
+    .value.teal { color:var(--teal); } .value.orange { color:var(--orange); } .value.red { color:var(--red); }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:13px; }
+    h2 { margin:0; font-size:1.05rem; letter-spacing:-.02em; }
+    .refresh { color:var(--muted); font-size:.78rem; }
+    .table-wrap { overflow:auto; border:1px solid var(--line); background:var(--panel); padding:8px; }
+    table { width:100%; border-collapse:collapse; min-width:660px; }
+    th, td { padding:15px 18px; text-align:left; border-bottom:1px solid var(--line); font-size:.88rem; }
+    th { color:var(--muted); font-size:.7rem; letter-spacing:.08em; text-transform:uppercase; font-weight:650; }
+    td { font-variant-numeric:tabular-nums; } tr:last-child td { border-bottom:0; }
+    .status { display:inline-flex; align-items:center; gap:7px; } .status::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--teal); } .status.error { color:var(--red); } .status.error::before { background:var(--red); }
+    .empty { color:var(--muted); padding:28px 18px; text-align:center; }
+    footer { color:var(--muted); font-size:.75rem; margin-top:28px; display:flex; justify-content:space-between; gap:16px; }
+    code { color:var(--orange); font-family:ui-monospace, SFMono-Regular, monospace; }
+    @media (max-width:980px) { .summary { grid-template-columns:1fr 1fr 1fr; } }
+    @media (max-width:760px) { main { padding:28px 16px 40px; } header { display:block; } .live { margin-top:22px; } .summary { grid-template-columns:1fr 1fr; } .metric:first-child { grid-column:span 2; } footer { display:block; line-height:1.8; } }
+    @media (prefers-reduced-motion:no-preference) { .metric, .table-wrap { animation:rise .5s cubic-bezier(.2,.8,.2,1) both; } .table-wrap { animation-delay:80ms; } @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } } }
+    :focus-visible { outline:2px solid var(--orange); outline-offset:3px; }
+    ::selection { color:var(--bg); background:var(--teal); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>Records / operação</h1><p class="subtitle">Visão em tempo real da ingestão: volume aceito, falhas e tempo de persistência por lote.</p></div>
+      <div class="live"><span id="health-dot" class="dot"></span><span id="health-text">conectando</span></div>
+    </header>
+    <section class="summary" aria-label="Resumo da operação">
+      <div class="metric"><div class="label">Registros inseridos</div><div id="inserted" class="value teal">—</div></div>
+      <div class="metric"><div class="label">Lotes concluídos</div><div id="batches" class="value">—</div></div>
+      <div class="metric"><div class="label">Erros</div><div id="errors" class="value red">—</div></div>
+      <div class="metric"><div class="label">Tempo total</div><div id="total-duration" class="value orange">—</div></div>
+      <div class="metric"><div class="label">Última operação</div><div id="duration" class="value orange">—</div></div>
+    </section>
+    <section>
+      <div class="section-head"><h2>Histórico recente</h2><span id="updated" class="refresh">aguardando dados</span></div>
+      <div class="table-wrap"><table><thead><tr><th>Status</th><th>Horário</th><th>Registros</th><th>Tempo</th></tr></thead><tbody id="history"><tr><td colspan="4" class="empty">Nenhum lote processado ainda.</td></tr></tbody></table></div>
+    </section>
+    <footer><span>Atualização automática a cada 2 segundos</span><span>Endpoint: <code>/api/metrics</code></span></footer>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    const number = value => new Intl.NumberFormat('pt-BR').format(value || 0);
+    const date = value => value ? new Date(value).toLocaleTimeString('pt-BR') : '—';
+    async function refresh() {
+      try {
+        const response = await fetch('/api/metrics', { cache: 'no-store' });
+        if (!response.ok) throw new Error('metrics');
+        const data = await response.json();
+        $('inserted').textContent = number(data.total_inserted);
+        $('batches').textContent = number(data.total_batches);
+        $('errors').textContent = number(data.total_errors);
+        $('total-duration').textContent = `${(data.total_duration_ms || 0).toFixed(1)} ms`;
+        $('duration').textContent = `${(data.last_duration_ms || 0).toFixed(1)} ms`;
+        $('updated').textContent = `atualizado há ${data.uptime_seconds < 2 ? 'instantes' : 'pouco'}`;
+        $('health-text').textContent = 'API online'; $('health-dot').className = 'dot';
+        $('history').innerHTML = data.recent_batches.length ? data.recent_batches.map(batch => `<tr><td><span class="status ${batch.status === 'error' ? 'error' : ''}">${batch.status === 'error' ? 'erro' : 'concluído'}</span></td><td>${date(batch.at)}</td><td>${number(batch.inserted)}</td><td>${batch.duration_ms.toFixed(1)} ms</td></tr>`).join('') : '<tr><td colspan="4" class="empty">Nenhum lote processado ainda.</td></tr>';
+      } catch (_) { $('health-text').textContent = 'API indisponível'; $('health-dot').className = 'dot error'; }
+    }
+    refresh(); setInterval(refresh, 2000);
+  </script>
+</body>
+</html>

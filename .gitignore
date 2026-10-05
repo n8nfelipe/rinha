@@ -1,0 +1,21 @@
+.env
+bin/
+tmp/
+
+# Artefatos locais de build e execução
+*.log
+*.tmp
+coverage.out
+gatling/target/
+
+# Configurações e instruções de ferramentas de IA/agentes
+.ai/
+.ia/
+.codex/
+.claude/
+.cursor/
+.copilot/
+AGENTS.md
+CLAUDE.md
+CODEX.md
+COPILOT.md
