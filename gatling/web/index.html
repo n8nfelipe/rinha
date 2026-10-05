@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101417">
+  <title>Gatling / laboratório de carga</title>
+  <style>
+    :root { color-scheme: dark; --ink:#e8f0ed; --muted:#93a29e; --bg:#101417; --panel:#171d20; --line:#2a3536; --teal:#77e0c0; --orange:#ffb454; --red:#ff807d; }
+    * { box-sizing:border-box; } body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif; }
+    main { max-width:1180px; margin:auto; padding:42px 28px 56px; } header { display:flex; justify-content:space-between; gap:28px; align-items:end; border-bottom:1px solid var(--line); padding-bottom:30px; }
+    h1 { margin:0; font-size:clamp(2.2rem,5vw,4.8rem); letter-spacing:-.04em; line-height:.93; max-width:9ch; } h2 { margin:0; font-size:1.05rem; letter-spacing:-.02em; } p { color:var(--muted); max-width:54ch; }
+    .status { display:flex; align-items:center; gap:10px; color:var(--teal); font-size:.76rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; } .dot { width:9px; height:9px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 5px #77e0c01c; } .dot.busy { background:var(--orange); box-shadow:0 0 0 5px #ffb4541c; } .dot.error { background:var(--red); box-shadow:0 0 0 5px #ff807d1c; }
+    .layout { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr); gap:1px; background:var(--line); border:1px solid var(--line); margin-top:28px; } section { background:var(--panel); padding:25px; } .control { background:#1b302d; }
+    label { display:block; color:var(--muted); font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; margin:18px 0 7px; } input { width:100%; border:1px solid var(--line); background:var(--bg); color:var(--ink); padding:12px 13px; font:inherit; border-radius:2px; } input:focus-visible, button:focus-visible, a:focus-visible { outline:2px solid var(--orange); outline-offset:3px; }
+    .fields { display:grid; grid-template-columns:1fr 1fr; gap:14px; } .fields label { margin-top:18px; } button { margin-top:22px; border:0; background:var(--teal); color:#10201c; padding:12px 16px; font:700 .85rem inherit; cursor:pointer; border-radius:2px; } button.secondary { background:transparent; color:var(--ink); border:1px solid var(--line); margin-left:8px; } button:disabled { opacity:.45; cursor:not-allowed; }
+    .readout { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); border:1px solid var(--line); margin-top:18px; } .readout div { background:var(--bg); padding:16px; } .value { display:block; margin-top:6px; font-size:1.35rem; font-weight:700; font-variant-numeric:tabular-nums; } .orange { color:var(--orange); }
+    .log { min-height:260px; max-height:360px; overflow:auto; background:#0c1012; border:1px solid var(--line); padding:14px; margin-top:14px; color:#b8c8c2; font:12px/1.6 ui-monospace,SFMono-Regular,monospace; white-space:pre-wrap; } .hint { font-size:.8rem; }
+    .reports { margin-top:28px; } .reports-head { display:flex; justify-content:space-between; align-items:baseline; gap:16px; margin-bottom:13px; } .report { display:flex; justify-content:space-between; gap:15px; border-top:1px solid var(--line); padding:14px 0; } .report a { color:var(--teal); } .report time { color:var(--muted); font-size:.8rem; }
+    .message { min-height:24px; color:var(--orange); font-size:.85rem; margin:13px 0 0; } footer { display:flex; justify-content:space-between; gap:16px; color:var(--muted); font-size:.75rem; margin-top:25px; } code { color:var(--orange); } @media (max-width:760px) { main { padding:28px 16px 40px; } header { display:block; } .status { margin-top:22px; } .layout { display:block; } footer { display:block; line-height:1.8; } }
+  </style>
+</head>
+<body><main>
+  <header><div><h1>Gatling / laboratório de carga</h1><p>Inicie uma simulação contra a API, acompanhe o processo e abra o relatório HTML sem sair do navegador.</p></div><div class="status"><span id="dot" class="dot"></span><span id="state">pronto</span></div></header>
+  <div class="layout">
+    <section class="control"><h2>Nova simulação</h2><p class="hint">O total precisa ser divisível pelo número de usuários. Os valores são sintéticos e a carga grava dados na base.</p><div class="fields"><div><label for="total">Requisições</label><input id="total" type="number" min="1" max="500000" step="1" value="100"></div><div><label for="users">Usuários concorrentes</label><input id="users" type="number" min="1" max="1000" step="1" value="4"></div></div><button id="run" onclick="run()">Iniciar carga</button><button id="stop" class="secondary" onclick="stop()" disabled>Interromper</button><div id="message" class="message" role="status"></div><div class="readout"><div><span class="hint">última execução</span><strong id="finished" class="value">—</strong></div><div><span class="hint">código de saída</span><strong id="exit" class="value orange">—</strong></div></div></section>
+    <section><h2>Saída do processo</h2><p class="hint">Atualização automática a cada 2 segundos.</p><div id="log" class="log">Nenhuma simulação executada.</div></section>
+  </div>
+  <section class="reports"><div class="reports-head"><h2>Relatórios HTML</h2><span class="hint">target/gatling</span></div><div id="reports"><p class="hint">Nenhum relatório gerado ainda.</p></div></section>
+  <footer><span>Alvo: <code>http://api:8080</code></span><span>Interface local: <code>:8090</code></span></footer>
+  <script>
+    const $ = id => document.getElementById(id); const number = n => new Intl.NumberFormat('pt-BR').format(n); const date = v => v ? new Date(v).toLocaleString('pt-BR') : '—';
+    async function request(url, options) { const res = await fetch(url, options); const data = await res.json(); if (!res.ok) throw new Error(data.error || 'erro inesperado'); return data; }
+    async function run() { try { $('message').textContent=''; await request('/api/run', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({total:Number($('total').value), users:Number($('users').value)})}); refresh(); } catch (e) { $('message').textContent=e.message; } }
+    async function stop() { try { await request('/api/stop', {method:'POST'}); $('message').textContent='Interrompendo a simulação…'; refresh(); } catch (e) { $('message').textContent=e.message; } }
+    async function refresh() { try { const data=await request('/api/status'); const busy=data.running; $('run').disabled=busy; $('stop').disabled=!busy; $('state').textContent=busy?'executando':'pronto'; $('dot').className='dot '+(busy?'busy':(data.error?'error':'')); $('finished').textContent=date(data.finished_at); $('exit').textContent=data.exit_code == null?'—':data.exit_code; $('log').textContent=data.log.length?data.log.join('\n'):'Nenhuma simulação executada.'; $('log').scrollTop=$('log').scrollHeight; $('reports').innerHTML=data.reports.length?data.reports.map(x=>`<div class="report"><a href="${x.url}" target="_blank" rel="noopener">${x.name}</a><time>${date(x.updated)}</time></div>`).join(''):'<p class="hint">Nenhum relatório gerado ainda.</p>'; if (!busy && data.error) $('message').textContent=data.error; } catch (e) { $('state').textContent='indisponível'; $('dot').className='dot error'; } }
+    refresh(); setInterval(refresh, 2000);
+  </script>
+</main></body></html>

@@ -13,7 +13,8 @@ A carga de performance usa Gatling e também chama exclusivamente `POST /pessoas
 Para executar a API:
 
 - Docker com Docker Compose;
-- portas `8080` e `5432` disponíveis.
+- portas `8080` e `5432` disponíveis;
+- porta `8090` disponível quando a interface de carga for usada.
 
 Para executar Gatling localmente, além da API:
 
@@ -43,6 +44,8 @@ Resposta esperada:
 ```
 
 Abra o painel operacional em <http://localhost:8080/>.
+
+O painel de carga do Gatling é iniciado separadamente pelo profile `load` e fica disponível em <http://localhost:8090/>.
 
 ## Endpoints principais
 
@@ -107,28 +110,21 @@ A simulação em [`gatling/src/test/java/rinha/CreatePeopleSimulation.java`](gat
 }
 ```
 
-### Executar pelo Docker Compose
+### Interface web pelo Docker Compose
 
-O serviço está no profile `load` para não disparar a carga automaticamente durante um `docker compose up` normal:
+O serviço está no profile `load` para não iniciar a interface durante um `docker compose up` normal:
 
 ```bash
-docker compose --profile load run --rm gatling
+docker compose --profile load up --build gatling
 ```
 
-Configuração padrão:
+Abra <http://localhost:8090/> para iniciar uma simulação, acompanhar os logs e abrir os relatórios HTML.
+
+O formulário começa preenchido com uma carga pequena para validação, mas nenhuma carga é executada automaticamente. A configuração de referência é:
 
 - 50.000 inserts;
 - 25 usuários concorrentes;
 - 2.000 requisições por usuário.
-
-Para uma execução menor:
-
-```bash
-GATLING_TOTAL=100 GATLING_USERS=4 \
-  docker compose --profile load run --rm gatling
-```
-
-`GATLING_TOTAL` precisa ser divisível por `GATLING_USERS`.
 
 ### Executar localmente
 
@@ -234,6 +230,7 @@ internal/httpapi/                rotas, validações, métricas e painel
 internal/store/                  acesso ao PostgreSQL
 db/init/                         criação inicial das tabelas
 gatling/                         simulação de carga Gatling
+gatling/web/                     interface web e acesso aos relatórios
 compose.yaml                     API, PostgreSQL e profile de carga
 Dockerfile                       build da API Go
 ```
@@ -260,14 +257,13 @@ Registros enviados para `/v1/records/bulk` ficam na tabela `people` e não apare
 
 ### O Gatling parece parado
 
-Use uma carga pequena para validar o ambiente:
+Confirme se o serviço da interface está em execução:
 
 ```bash
-GATLING_TOTAL=100 GATLING_USERS=4 \
-  docker compose --profile load run --rm gatling
+docker compose --profile load ps
 ```
 
-Na primeira execução, o Maven baixa as dependências do Gatling. O relatório só é gerado ao final da simulação.
+Depois abra <http://localhost:8090/>, mantenha uma carga divisível — por exemplo, `100` requisições e `4` usuários — e clique em **Iniciar carga**. Na primeira execução, o Maven baixa as dependências do Gatling. O relatório aparece no painel ao final da simulação.
 
 ### Recriar o banco
 

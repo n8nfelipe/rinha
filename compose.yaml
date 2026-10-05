@@ -33,23 +33,17 @@ services:
     restart: unless-stopped
 
   gatling:
-    image: maven:3.9-eclipse-temurin-17
+    build:
+      context: ./gatling
     profiles: ["load"]
+    ports:
+      - "8090:8090"
     working_dir: /workspace
     volumes:
       - ./gatling:/workspace
     environment:
-      GATLING_TOTAL: ${GATLING_TOTAL:-50000}
-      GATLING_USERS: ${GATLING_USERS:-25}
-    command:
-      - sh
-      - -c
-      - >-
-        sleep 5 &&
-        mvn -U gatling:test
-        -DbaseUrl=http://api:8080
-        -Dtotal=$$GATLING_TOTAL
-        -Dusers=$$GATLING_USERS
+      BASE_URL: http://api:8080
+      HTTP_ADDR: :8090
     depends_on:
       api:
         condition: service_started
