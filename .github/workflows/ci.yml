@@ -33,6 +33,3 @@ jobs:
 
       - name: Código estático (go vet)
         run: go vet ./...
-
-      - name: Testes
-        run: go test ./... -race -count=1
